@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Secure Ultra Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body { margin:0; background:black; overflow:hidden; }
+    #video { width:100%; height:100vh; object-fit:contain; background:black; }
+    #logo {
+      position:absolute;
+      top:0; left:0;
+      width:100%; height:100%;
+      opacity:0.2;
+      z-index:10;
+      pointer-events:none;
+      background:url('https://i.ibb.co/4fYQxYB/logo.png') center center no-repeat;
+      background-size:contain;
+    }
+    #block {
+      color:white; text-align:center; margin-top:20%; font-size:24px;
+      display:none;
+    }
+  </style>
+</head>
+<body>
+
+<div id="logo"></div>
+<div id="block">❌ Unauthorized Access Blocked</div>
+<video id="video" controls autoplay playsinline></video>
+
+<script>
+  const allowedDomains = [
+    "mhdtvliv.com",
+    "durbintv.com",
+    "mhdtvp.com",
+    "neesportsliv.com"
+  ];
+
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const allowedToken = "12345"; // Change to your secret token
+  const videoSrc = params.get("url");
+  const video = document.getElementById("video");
+
+  // ✅ Domain check
+  const ref = document.referrer || window.location.ancestorOrigins[0] || "";
+  let domainAllowed = allowedDomains.some(d => ref.includes(d) || window.location.hostname.includes(d));
+
+  // ✅ Token + URL check
+  if (!domainAllowed || token !== allowedToken || !videoSrc) {
+    document.getElementById("video").style.display = "none";
+    document.getElementById("block").style.display = "block";
+    throw new Error("Unauthorized Access");
+  }
+
+  // 🚀 Load HLS video
+  if(Hls.isSupported()){
+    const hls = new Hls({
+      maxBufferLength:10,
+      maxMaxBufferLength:30,
+      liveSyncDuration:3,
+      liveMaxLatencyDuration:5,
+      enableWorker:true,
+      lowLatencyMode:true
+    });
+    hls.loadSource(videoSrc);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.ERROR, (event, data) => console.error("HLS Error:", data));
+  } else if(video.canPlayType('application/vnd.apple.mpegurl')){
+    video.src = videoSrc;
+  }
+
+  // ⚡ Auto fullscreen on first tap/click
+  document.body.addEventListener("click", () => {
+    if(video.requestFullscreen) video.requestFullscreen();
+    else if(video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+  }, {once:true});
+
+</script>
+
+</body>
+</html>
